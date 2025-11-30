@@ -8,13 +8,14 @@ import { useToast } from "@/hooks/use-toast";
 import { Settings } from "lucide-react";
 
 const CMSAdmin = () => {
-  const { content, updateContent, resetContent } = useCMS();
+  const { content, updateContent, resetContent, isLoading, error } = useCMS();
   const { toast } = useToast();
 
   const handleSave = () => {
     toast({
-      title: "Content Saved",
-      description: "Your changes have been saved successfully.",
+      title: "Preview Updated",
+      description: "Changes are shown in preview. Edit content in Contentful to persist changes.",
+      variant: "default",
     });
   };
 
@@ -33,14 +34,37 @@ const CMSAdmin = () => {
           <div className="flex items-center gap-3">
             <Settings className="h-8 w-8 text-primary" />
             <div>
-              <h1 className="text-4xl font-bold">CMS Admin</h1>
-              <p className="text-muted-foreground">Manage your website content</p>
+              <h1 className="text-4xl font-bold">Contentful CMS</h1>
+              <p className="text-muted-foreground">Content powered by Contentful</p>
             </div>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={handleReset}>Reset All</Button>
-            <Button onClick={handleSave}>Save Changes</Button>
+            <Button variant="outline" onClick={handleReset}>Reset to Default</Button>
+            <Button onClick={handleSave}>Preview Changes</Button>
           </div>
+        </div>
+
+        {error && (
+          <div className="mb-6 p-4 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive">
+            {error}
+          </div>
+        )}
+
+        {isLoading && (
+          <div className="mb-6 p-4 bg-muted rounded-lg">
+            Loading content from Contentful...
+          </div>
+        )}
+
+        <div className="mb-6 p-4 bg-primary/10 border border-primary/20 rounded-lg">
+          <p className="text-sm font-medium mb-2">📝 Content Management</p>
+          <p className="text-sm text-muted-foreground">
+            Content is fetched from Contentful. To make permanent changes, edit your content in the{" "}
+            <a href="https://app.contentful.com" target="_blank" rel="noopener noreferrer" className="underline">
+              Contentful web app
+            </a>
+            . Changes here are for preview only.
+          </p>
         </div>
 
         <div className="space-y-6">

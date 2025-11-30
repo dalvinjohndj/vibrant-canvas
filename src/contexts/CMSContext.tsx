@@ -1,4 +1,12 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createClient, Entry } from 'contentful';
+
+// Contentful Configuration
+// Add your Contentful credentials here
+const CONTENTFUL_CONFIG = {
+  space: 'YOUR_SPACE_ID', // Replace with your Contentful Space ID
+  accessToken: 'YOUR_ACCESS_TOKEN', // Replace with your Contentful Access Token
+};
 
 interface CMSContent {
   [key: string]: any;
@@ -8,6 +16,8 @@ interface CMSContextType {
   content: CMSContent;
   updateContent: (key: string, value: any) => void;
   resetContent: () => void;
+  isLoading: boolean;
+  error: string | null;
 }
 
 const defaultContent: CMSContent = {
@@ -22,27 +32,75 @@ const defaultContent: CMSContent = {
 
 const CMSContext = createContext<CMSContextType | undefined>(undefined);
 
-export const CMSProvider = ({ children }: { children: ReactNode }) => {
-  const [content, setContent] = useState<CMSContent>(() => {
-    const stored = localStorage.getItem('cms-content');
-    return stored ? JSON.parse(stored) : defaultContent;
-  });
+// Initialize Contentful client
+const contentfulClient = createClient({
+  space: CONTENTFUL_CONFIG.space,
+  accessToken: CONTENTFUL_CONFIG.accessToken,
+});
 
+export const CMSProvider = ({ children }: { children: ReactNode }) => {
+  const [content, setContent] = useState<CMSContent>(defaultContent);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch content from Contentful on mount
   useEffect(() => {
-    localStorage.setItem('cms-content', JSON.stringify(content));
-  }, [content]);
+    const fetchContentfulData = async () => {
+      // Only fetch if credentials are configured
+      if (CONTENTFUL_CONFIG.space === 'YOUR_SPACE_ID' || !CONTENTFUL_CONFIG.space) {
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        // Fetch all entries from Contentful
+        const response = await contentfulClient.getEntries({
+          content_type: 'siteContent', // Update this to match your Contentful content type
+        });
+
+        if (response.items.length > 0) {
+          const entry = response.items[0];
+          const fields = entry.fields as any;
+          
+          // Map Contentful fields to your content structure
+          const contentfulData: CMSContent = {
+            heroTitle: fields.heroTitle || defaultContent.heroTitle,
+            heroSubtitle: fields.heroSubtitle || defaultContent.heroSubtitle,
+            aboutMission: fields.aboutMission || defaultContent.aboutMission,
+            aboutVision: fields.aboutVision || defaultContent.aboutVision,
+            contactEmail: fields.contactEmail || defaultContent.contactEmail,
+            contactPhone: fields.contactPhone || defaultContent.contactPhone,
+            contactAddress: fields.contactAddress || defaultContent.contactAddress,
+          };
+          
+          setContent(contentfulData);
+        }
+      } catch (err) {
+        console.error('Error fetching from Contentful:', err);
+        setError('Failed to load content from Contentful. Using default content.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchContentfulData();
+  }, []);
 
   const updateContent = (key: string, value: any) => {
     setContent(prev => ({ ...prev, [key]: value }));
+    // Note: Updates to Contentful should be done through the Contentful web app
+    console.warn('Content updates should be made in Contentful CMS');
   };
 
   const resetContent = () => {
     setContent(defaultContent);
-    localStorage.removeItem('cms-content');
   };
 
   return (
-    <CMSContext.Provider value={{ content, updateContent, resetContent }}>
+    <CMSContext.Provider value={{ content, updateContent, resetContent, isLoading, error }}>
       {children}
     </CMSContext.Provider>
   );
